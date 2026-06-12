@@ -172,6 +172,57 @@ const MonitoringController = {
       res.status(500).json({ success: false, message: error.message });
     }
   },
+
+  // Add Screenshot
+  async addScreenshot(req, res) {
+    try {
+      const screenshotData = req.body;
+      if (req.file) {
+        // Store the relative URL to the file
+        screenshotData.file_url = `/uploads/screenshots/${req.file.filename}`;
+      }
+      const result = await MonitoringModel.addScreenshot(screenshotData);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Get Screenshots
+  async getScreenshots(req, res) {
+    try {
+      const { user_id, start_date, end_date } = req.body;
+      const screenshots = await MonitoringModel.getScreenshots(
+        user_id,
+        start_date,
+        end_date,
+      );
+      res.status(200).json({ success: true, data: screenshots });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Add Notification
+  async addNotification(req, res) {
+    try {
+      const result = await MonitoringModel.addNotification(req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Get Notifications
+  async getNotifications(req, res) {
+    try {
+      const { user_id, search } = req.body;
+      const notifications = await MonitoringModel.getNotifications(user_id, search);
+      res.status(200).json({ success: true, data: notifications });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
 };
 
 module.exports = MonitoringController;

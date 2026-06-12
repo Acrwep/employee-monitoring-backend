@@ -37,4 +37,38 @@ const uploadRecording = multer({
   },
 });
 
-module.exports = { uploadRecording };
+// Configure storage for screenshots
+const screenshotStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/screenshots/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
+    );
+  },
+});
+
+const uploadScreenshot = multer({
+  storage: screenshotStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    // Accept image files based on MIME type or common extensions
+    const isImage = file.mimetype.startsWith("image/");
+
+    const allowedExtensions = /^\.(jpg|jpeg|png|webp|gif)$/i;
+    const hasAllowedExt = allowedExtensions.test(
+      path.extname(file.originalname),
+    );
+
+    if (isImage || hasAllowedExt) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed!"));
+    }
+  },
+});
+
+module.exports = { uploadRecording, uploadScreenshot };

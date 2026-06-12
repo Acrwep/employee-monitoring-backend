@@ -351,6 +351,90 @@ const MonitoringModel = {
       throw new Error(error.message);
     }
   },
+
+  // 8. Screenshots
+  async addScreenshot(screenshotData) {
+    try {
+      const { user_id, file_url, capture_time } = screenshotData;
+      const [result] = await pool.query(
+        `INSERT INTO screenshots (user_id, file_url, capture_time) VALUES (?, ?, ?)`,
+        [user_id, file_url, capture_time],
+      );
+      return result.affectedRows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  async getScreenshots(user_id, start_date, end_date) {
+    try {
+      const params = [user_id];
+      let query = `SELECT
+            s.screenshot_id,
+            s.user_id,
+            u.full_name,
+            s.file_url,
+            s.capture_time
+        FROM screenshots AS s
+        INNER JOIN users AS u ON
+          s.user_id = u.user_id
+        WHERE s.user_id = ?`;
+
+      if (start_date && end_date) {
+        query += ` AND s.capture_time BETWEEN ? AND ?`;
+        params.push(start_date, end_date);
+      }
+
+      query += ` ORDER BY s.capture_time DESC`;
+      const [rows] = await pool.query(query, params);
+      return rows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  // 9. Notifications
+  async addNotification(notificationData) {
+    try {
+      const { user_id, package_name, app_name, title, text_content, post_time } = notificationData;
+      const [result] = await pool.query(
+        `INSERT INTO notifications (user_id, package_name, app_name, title, text_content, post_time) VALUES (?, ?, ?, ?, ?, ?)`,
+        [user_id, package_name, app_name, title, text_content, post_time],
+      );
+      await this.updateActivitySummary(user_id, "events");
+      return result.affectedRows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  async getNotifications(user_id, search = "") {
+    try {
+      let query = `SELECT
+            n.notification_id,
+            n.user_id,
+            u.full_name,
+            n.package_name,
+            n.app_name,
+            n.title,
+            n.text_content,
+            n.post_time
+        FROM notifications AS n
+        INNER JOIN users AS u ON
+          n.user_id = u.user_id
+        WHERE n.user_id = ?`;
+      let params = [user_id];
+      if (search) {
+        query += ` AND (n.title LIKE ? OR n.text_content LIKE ? OR n.app_name LIKE ?)`;
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      }
+      query += ` ORDER BY n.post_time DESC`;
+      const [rows] = await pool.query(query, params);
+      return rows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
 };
 
 module.exports = MonitoringModel;
