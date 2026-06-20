@@ -58,10 +58,19 @@ const MonitoringModel = {
     }
   },
 
-  async getCallLogs(user_id) {
+  async getCallLogs(user_id, page, limit, search) {
     try {
-      const [rows] = await pool.query(
-        `SELECT
+      let query = "";
+      const params = [];
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM call_logs WHERE user_id = ?";
+      const countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
+
+      query += `SELECT
             cl.call_id,
             cl.user_id,
             u.full_name,
@@ -75,10 +84,32 @@ const MonitoringModel = {
             call_logs AS cl
         INNER JOIN users AS u ON
             cl.user_id = u.user_id
-        WHERE cl.user_id = ?`,
-        [user_id],
-      );
-      return rows;
+        WHERE 1 = 1`;
+
+      if (search) {
+        query += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
+        params.push(`%${search}%`, `%${search}%`);
+        countQuery += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
+        countParams.push(`%${search}%`, `%${search}%`);
+      }
+
+      query += ` ORDER BY call_time DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
+      const [rows] = await pool.query(query, params);
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }
@@ -113,7 +144,7 @@ const MonitoringModel = {
     }
   },
 
-  async getMessages(user_id, search) {
+  async getMessages(user_id, search, page, limit) {
     try {
       let query = `SELECT
             m.message_id,
@@ -130,13 +161,36 @@ const MonitoringModel = {
             m.user_id = u.user_id
         WHERE m.user_id = ?`;
       let params = [user_id];
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM messages WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
       if (search) {
         query += ` AND (m.message_body LIKE ? OR m.sender_id LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`);
+        countQuery += ` AND (m.message_body LIKE ? OR m.sender_id LIKE ?)`;
+        countParams.push(`%${search}%`, `%${search}%`);
       }
       query += ` ORDER BY m.time_periode DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
-      return rows;
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }
@@ -177,7 +231,7 @@ const MonitoringModel = {
     }
   },
 
-  async getRecordings(user_id, source_type = null, search = "") {
+  async getRecordings(user_id, source_type = null, search = "", page, limit) {
     try {
       let query = `SELECT
             r.recording_id,
@@ -196,18 +250,47 @@ const MonitoringModel = {
         INNER JOIN users AS u ON
             r.user_id = u.user_id
         WHERE r.user_id = ?`;
+
       let params = [user_id];
+
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM recordings WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
       if (source_type && source_type !== "All") {
         query += ` AND source_type = ?`;
         params.push(source_type);
+
+        countQuery += ` AND source_type = ?`;
+        countParams.push(source_type);
       }
       if (search) {
         query += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`);
+
+        countQuery += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
+        countParams.push(`%${search}%`, `%${search}%`);
       }
       query += ` ORDER BY time_periode DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
-      return rows;
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }
@@ -234,7 +317,7 @@ const MonitoringModel = {
     }
   },
 
-  async getWebActivity(user_id, search = "") {
+  async getWebActivity(user_id, search = "", page, limit) {
     try {
       let query = `SELECT
             wa.activity_id,
@@ -250,13 +333,37 @@ const MonitoringModel = {
             wa.user_id = u.user_id
         WHERE wa.user_id = ?`;
       let params = [user_id];
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM web_activity WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
       if (search) {
         query += ` AND website_name LIKE ?`;
         params.push(`%${search}%`);
+
+        countQuery += ` AND website_name LIKE ?`;
+        countParams.push(`%${search}%`);
       }
       query += ` ORDER BY visit_time DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
-      return rows;
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }
@@ -321,7 +428,7 @@ const MonitoringModel = {
     }
   },
 
-  async getAppUsage(user_id, start_date, end_date) {
+  async getAppUsage(user_id, start_date, end_date, page, limit) {
     try {
       const params = [];
       let query = `SELECT
@@ -344,9 +451,30 @@ const MonitoringModel = {
         params.push(start_date, end_date);
       }
 
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM app_usage WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
       query += ` ORDER BY au.date_periode DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
-      return rows;
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }
@@ -366,7 +494,7 @@ const MonitoringModel = {
     }
   },
 
-  async getScreenshots(user_id, start_date, end_date) {
+  async getScreenshots(user_id, start_date, end_date, page, limit) {
     try {
       const params = [user_id];
       let query = `SELECT
@@ -385,9 +513,31 @@ const MonitoringModel = {
         params.push(start_date, end_date);
       }
 
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM screenshots WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
+
       query += ` ORDER BY s.capture_time DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
-      return rows;
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }
@@ -396,7 +546,14 @@ const MonitoringModel = {
   // 9. Notifications
   async addNotification(notificationData) {
     try {
-      const { user_id, package_name, app_name, title, text_content, post_time } = notificationData;
+      const {
+        user_id,
+        package_name,
+        app_name,
+        title,
+        text_content,
+        post_time,
+      } = notificationData;
       const [result] = await pool.query(
         `INSERT INTO notifications (user_id, package_name, app_name, title, text_content, post_time) VALUES (?, ?, ?, ?, ?, ?)`,
         [user_id, package_name, app_name, title, text_content, post_time],
@@ -408,7 +565,7 @@ const MonitoringModel = {
     }
   },
 
-  async getNotifications(user_id, search = "") {
+  async getNotifications(user_id, search = "", page, limit) {
     try {
       let query = `SELECT
             n.notification_id,
@@ -424,13 +581,185 @@ const MonitoringModel = {
           n.user_id = u.user_id
         WHERE n.user_id = ?`;
       let params = [user_id];
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM notifications WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
       if (search) {
         query += ` AND (n.title LIKE ? OR n.text_content LIKE ? OR n.app_name LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+
+        countQuery += ` AND (n.title LIKE ? OR n.text_content LIKE ? OR n.app_name LIKE ?)`;
+        countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
       }
       query += ` ORDER BY n.post_time DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
-      return rows;
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  // 10. WhatsApp Chat Logs
+  async addWhatsappChatLog(chatData) {
+    try {
+      const { user_id, diraction, contact_name, message, created_at } =
+        chatData;
+      const [result] = await pool.query(
+        `INSERT INTO whatsapp_chat_logs (user_id, diraction, contact_name, message, created_at) VALUES (?, ?, ?, ?, ?)`,
+        [user_id, diraction, contact_name, message, created_at || new Date()],
+      );
+      return result.affectedRows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  async getWhatsappChatLogs(user_id, search = "", page, limit) {
+    try {
+      let query = `SELECT
+            wcl.id,
+            wcl.user_id,
+            u.full_name,
+            wcl.diraction,
+            wcl.contact_name,
+            wcl.message,
+            wcl.created_at
+        FROM whatsapp_chat_logs AS wcl
+        INNER JOIN users AS u ON
+          wcl.user_id = u.user_id
+        WHERE wcl.user_id = ?`;
+      let params = [user_id];
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM whatsapp_chat_logs WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
+
+      if (search) {
+        query += ` AND (wcl.contact_name LIKE ? OR wcl.message LIKE ?)`;
+        params.push(`%${search}%`, `%${search}%`);
+
+        countQuery += ` AND (wcl.contact_name LIKE ? OR wcl.message LIKE ?)`;
+        countParams.push(`%${search}%`, `%${search}%`);
+      }
+      query += ` ORDER BY wcl.created_at DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
+      const [rows] = await pool.query(query, params);
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  // 11. WhatsApp Call Logs
+  async addWhatsappCallLog(callData) {
+    try {
+      const {
+        user_id,
+        diraction,
+        contact_name,
+        call_type,
+        duration,
+        created_at,
+      } = callData;
+      const [result] = await pool.query(
+        `INSERT INTO whatsapp_call_logs (user_id, diraction, contact_name, call_type, duration, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          user_id,
+          diraction,
+          contact_name,
+          call_type,
+          duration || 0,
+          created_at || new Date(),
+        ],
+      );
+      return result.affectedRows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  async getWhatsappCallLogs(user_id, search = "", page, limit) {
+    try {
+      let query = `SELECT
+            wcl.id,
+            wcl.user_id,
+            u.full_name,
+            wcl.diraction,
+            wcl.contact_name,
+            wcl.call_type,
+            wcl.duration,
+            wcl.created_at
+        FROM whatsapp_call_logs AS wcl
+        INNER JOIN users AS u ON
+          wcl.user_id = u.user_id
+        WHERE wcl.user_id = ?`;
+      let params = [user_id];
+      let countQuery =
+        "SELECT COUNT(*) AS total FROM whatsapp_call_logs WHERE user_id = ?";
+      let countParams = [user_id];
+
+      const pageNumber = parseInt(page, 10) || 1;
+      const limitNumber = parseInt(limit, 10) || 10;
+      const offset = (pageNumber - 1) * limitNumber;
+
+      if (search) {
+        query += ` AND wcl.contact_name LIKE ?`;
+        params.push(`%${search}%`);
+
+        countQuery += ` AND wcl.contact_name LIKE ?`;
+        countParams.push(`%${search}%`);
+      }
+      query += ` ORDER BY wcl.created_at DESC`;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limitNumber, offset);
+      const [rows] = await pool.query(query, params);
+      const [getCount] = await pool.query(countQuery, countParams);
+
+      const total = getCount[0]?.total || 0;
+
+      return {
+        data: rows,
+        pagination: {
+          total: parseInt(total),
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      };
     } catch (error) {
       throw new Error(error.message);
     }

@@ -68,8 +68,13 @@ const MonitoringController = {
   // Get Call Logs
   async getCallLogs(req, res) {
     try {
-      const { user_id } = req.params;
-      const logs = await MonitoringModel.getCallLogs(user_id);
+      const { user_id, page, limit, search } = req.body;
+      const logs = await MonitoringModel.getCallLogs(
+        user_id,
+        page,
+        limit,
+        search,
+      );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -89,8 +94,13 @@ const MonitoringController = {
   // Get Messages (Input Intelligence)
   async getMessages(req, res) {
     try {
-      const { user_id, search } = req.body;
-      const messages = await MonitoringModel.getMessages(user_id, search);
+      const { user_id, search, page, limit } = req.body;
+      const messages = await MonitoringModel.getMessages(
+        user_id,
+        search,
+        page,
+        limit,
+      );
       res.status(200).json({ success: true, data: messages });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -115,11 +125,13 @@ const MonitoringController = {
   // Get Recordings
   async getRecordings(req, res) {
     try {
-      const { user_id, source_type, search } = req.body;
+      const { user_id, source_type, search, page, limit } = req.body;
       const recordings = await MonitoringModel.getRecordings(
         user_id,
         source_type,
         search,
+        page,
+        limit,
       );
       res.status(200).json({ success: true, data: recordings });
     } catch (error) {
@@ -140,8 +152,13 @@ const MonitoringController = {
   // Get Web Activity
   async getWebActivity(req, res) {
     try {
-      const { user_id, search } = req.body;
-      const activity = await MonitoringModel.getWebActivity(user_id, search);
+      const { user_id, search, page, limit } = req.body;
+      const activity = await MonitoringModel.getWebActivity(
+        user_id,
+        search,
+        page,
+        limit,
+      );
       res.status(200).json({ success: true, data: activity });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -161,11 +178,13 @@ const MonitoringController = {
   // Get App Usage
   async getAppUsage(req, res) {
     try {
-      const { user_id, start_date, end_date } = req.body;
+      const { user_id, start_date, end_date, page, limit } = req.body;
       const usage = await MonitoringModel.getAppUsage(
         user_id,
         start_date,
         end_date,
+        page,
+        limit,
       );
       res.status(200).json({ success: true, data: usage });
     } catch (error) {
@@ -191,11 +210,13 @@ const MonitoringController = {
   // Get Screenshots
   async getScreenshots(req, res) {
     try {
-      const { user_id, start_date, end_date } = req.body;
+      const { user_id, start_date, end_date, page, limit } = req.body;
       const screenshots = await MonitoringModel.getScreenshots(
         user_id,
         start_date,
         end_date,
+        page,
+        limit,
       );
       res.status(200).json({ success: true, data: screenshots });
     } catch (error) {
@@ -216,9 +237,66 @@ const MonitoringController = {
   // Get Notifications
   async getNotifications(req, res) {
     try {
-      const { user_id, search } = req.body;
-      const notifications = await MonitoringModel.getNotifications(user_id, search);
+      const { user_id, search, page, limit } = req.body;
+      const notifications = await MonitoringModel.getNotifications(
+        user_id,
+        search,
+        page,
+        limit,
+      );
       res.status(200).json({ success: true, data: notifications });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Add WhatsApp Chat Log
+  async addWhatsappChatLog(req, res) {
+    try {
+      const result = await MonitoringModel.addWhatsappChatLog(req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Get WhatsApp Chat Logs
+  async getWhatsappChatLogs(req, res) {
+    try {
+      const { user_id, search, page, limit } = req.body;
+      const logs = await MonitoringModel.getWhatsappChatLogs(
+        user_id,
+        search,
+        page,
+        limit,
+      );
+      res.status(200).json({ success: true, data: logs });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Add WhatsApp Call Log
+  async addWhatsappCallLog(req, res) {
+    try {
+      const result = await MonitoringModel.addWhatsappCallLog(req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Get WhatsApp Call Logs
+  async getWhatsappCallLogs(req, res) {
+    try {
+      const { user_id, search, page, limit } = req.body;
+      const logs = await MonitoringModel.getWhatsappCallLogs(
+        user_id,
+        search,
+        page,
+        limit,
+      );
+      res.status(200).json({ success: true, data: logs });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }

