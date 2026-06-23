@@ -764,6 +764,24 @@ const MonitoringModel = {
       throw new Error(error.message);
     }
   },
+
+  getUsers: async () => {
+    try {
+      const [rows] = await pool.query(
+        `SELECT
+            user_id,
+            full_name,
+            email,
+            mobile_number
+        FROM
+            users
+        ORDER BY full_name ASC`,
+      );
+      return rows;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
 };
 
 module.exports = MonitoringModel;

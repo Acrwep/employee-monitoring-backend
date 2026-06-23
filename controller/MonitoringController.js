@@ -301,6 +301,16 @@ const MonitoringController = {
       res.status(500).json({ success: false, message: error.message });
     }
   },
+
+  // Get Users
+  async getUsers(req, res) {
+    try {
+      const users = await MonitoringModel.getUsers();
+      res.status(200).json({ success: true, data: users });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
 };
 
 module.exports = MonitoringController;

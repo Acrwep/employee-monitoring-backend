@@ -51,4 +51,6 @@ router.post("/whatsapp-chat-logs", MonitoringController.getWhatsappChatLogs);
 router.post("/add-whatsapp-call-logs", MonitoringController.addWhatsappCallLog);
 router.post("/whatsapp-call-logs", MonitoringController.getWhatsappCallLogs);
 
+router.get("/users", MonitoringController.getUsers);
+
 module.exports = router;
