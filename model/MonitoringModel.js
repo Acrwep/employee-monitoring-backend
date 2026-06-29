@@ -4,10 +4,31 @@ const MonitoringModel = {
   // 1. User Profile
   async createUser(userData) {
     try {
-      const { full_name, email, mobile_number, password_hash } = userData;
+      const { full_name, email, mobile_number, password_hash, category_id } =
+        userData;
       const [result] = await pool.execute(
-        `INSERT INTO users (full_name, email, mobile_number, password_hash) VALUES (?, ?, ?, ?)`,
-        [full_name, email, mobile_number, password_hash],
+        `INSERT INTO users (full_name, email, mobile_number, password_hash, category_id) VALUES (?, ?, ?, ?, ?)`,
+        [full_name, email, mobile_number, password_hash, category_id],
+      );
+      return result;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  async updateUser(userData) {
+    try {
+      const {
+        user_id,
+        full_name,
+        email,
+        mobile_number,
+        password_hash,
+        category_id,
+      } = userData;
+      const [result] = await pool.execute(
+        `UPDATE users SET full_name = ?, email = ?, mobile_number = ?, password_hash = ?, category_id = ? WHERE user_id = ?`,
+        [full_name, email, mobile_number, password_hash, category_id, user_id],
       );
       return result;
     } catch (error) {

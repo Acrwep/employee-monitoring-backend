@@ -1,10 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const MonitoringController = require("../controller/MonitoringController");
+const DashboardController = require("../controller/DashboardController");
 const {
   uploadRecording,
   uploadScreenshot,
 } = require("../middleware/uploadMiddleware");
+
+// Dashboard Routes
+router.get("/category", DashboardController.getCategory);
+router.get("/category/:id", DashboardController.getCategoryById);
+router.post("/category", DashboardController.addCategory);
+router.put("/category/:id", DashboardController.updateCategory);
+router.delete("/category/:id", DashboardController.deleteCategory);
+router.post("/dashboard/summary", DashboardController.getDashboardSummary);
 
 // Auth Routes
 router.post("/signup", MonitoringController.signup);
