@@ -318,7 +318,7 @@ const MonitoringController = {
   // Get Users
   async getUsers(req, res) {
     try {
-      const users = await MonitoringModel.getUsers();
+      const users = await MonitoringModel.getUsers(req.query);
       res.status(200).json({ success: true, data: users });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });

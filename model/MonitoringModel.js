@@ -786,18 +786,28 @@ const MonitoringModel = {
     }
   },
 
-  getUsers: async () => {
+  getUsers: async (filter) => {
+    const { branch_id, user_id } = filter;
+    let params = [];
     try {
-      const [rows] = await pool.query(
-        `SELECT
+      let query = `SELECT
             user_id,
             full_name,
             email,
             mobile_number
         FROM
             users
-        ORDER BY full_name ASC`,
-      );
+        WHERE 1 = 1`;
+
+      if (branch_id) {
+        query += " AND category_id = ?";
+        params.push(branch_id);
+      }
+      if (user_id) {
+        query += " AND user_id = ?";
+        params.push(user_id);
+      }
+      const [rows] = await pool.query(query, params);
       return rows;
     } catch (error) {
       throw new Error(error.message);
