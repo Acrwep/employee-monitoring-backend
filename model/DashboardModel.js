@@ -82,10 +82,10 @@ const DashboardModel = {
       let dateParams = [];
 
       if (start_date && end_date) {
-        dateFilterCallLogs = ` AND DATE(call_time) >= ? AND DATE(call_time) <= ?`;
-        dateFilterMessages = ` AND DATE(time_periode) >= ? AND DATE(time_periode) <= ?`;
-        dateFilterWaCalls = ` AND DATE(created_at) >= ? AND DATE(created_at) <= ?`;
-        dateFilterWaChats = ` AND DATE(created_at) >= ? AND DATE(created_at) <= ?`;
+        dateFilterCallLogs = ` AND call_time >= ? AND call_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        dateFilterMessages = ` AND time_periode >= ? AND time_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        dateFilterWaCalls = ` AND created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+        dateFilterWaChats = ` AND created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
         dateParams = [start_date, end_date];
       }
 
@@ -157,16 +157,19 @@ const DashboardModel = {
       };
 
       // Create Maps for O(1) lookups instead of O(N) array finds
-      const pCallsMap = new Map(phoneCalls.map((p) => [p.user_id, p]));
-      const pMsgsMap = new Map(phoneMessages.map((p) => [p.user_id, p]));
-      const wCallsMap = new Map(waCalls.map((w) => [w.user_id, w]));
-      const wChatsMap = new Map(waChats.map((w) => [w.user_id, w]));
+      const pCallsMap = new Map(phoneCalls.map((p) => [String(p.user_id), p]));
+      const pMsgsMap = new Map(
+        phoneMessages.map((p) => [String(p.user_id), p]),
+      );
+      const wCallsMap = new Map(waCalls.map((w) => [String(w.user_id), w]));
+      const wChatsMap = new Map(waChats.map((w) => [String(w.user_id), w]));
 
       const results = users.map((user) => {
-        const pCalls = pCallsMap.get(user.user_id) || {};
-        const pMsgs = pMsgsMap.get(user.user_id) || {};
-        const wCalls = wCallsMap.get(user.user_id) || {};
-        const wChats = wChatsMap.get(user.user_id) || {};
+        const userIdStr = String(user.user_id);
+        const pCalls = pCallsMap.get(userIdStr) || {};
+        const pMsgs = pMsgsMap.get(userIdStr) || {};
+        const wCalls = wCallsMap.get(userIdStr) || {};
+        const wChats = wChatsMap.get(userIdStr) || {};
 
         const getMaxDate = (d1, d2) => {
           if (!d1) return d2;

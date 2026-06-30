@@ -81,12 +81,16 @@ const MonitoringController = {
   // Get Call Logs
   async getCallLogs(req, res) {
     try {
-      const { user_id, page, limit, search } = req.body;
+      const { user_id, page, limit, search, start_date, end_date, call_type } =
+        req.body;
       const logs = await MonitoringModel.getCallLogs(
         user_id,
         page,
         limit,
         search,
+        start_date,
+        end_date,
+        call_type,
       );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {
@@ -107,12 +111,14 @@ const MonitoringController = {
   // Get Messages (Input Intelligence)
   async getMessages(req, res) {
     try {
-      const { user_id, search, page, limit } = req.body;
+      const { user_id, search, page, limit, start_date, end_date } = req.body;
       const messages = await MonitoringModel.getMessages(
         user_id,
         search,
         page,
         limit,
+        start_date,
+        end_date,
       );
       res.status(200).json({ success: true, data: messages });
     } catch (error) {
@@ -138,13 +144,23 @@ const MonitoringController = {
   // Get Recordings
   async getRecordings(req, res) {
     try {
-      const { user_id, source_type, search, page, limit } = req.body;
+      const {
+        user_id,
+        source_type,
+        search,
+        page,
+        limit,
+        start_date,
+        end_date,
+      } = req.body;
       const recordings = await MonitoringModel.getRecordings(
         user_id,
         source_type,
         search,
         page,
         limit,
+        start_date,
+        end_date,
       );
       res.status(200).json({ success: true, data: recordings });
     } catch (error) {
@@ -165,12 +181,14 @@ const MonitoringController = {
   // Get Web Activity
   async getWebActivity(req, res) {
     try {
-      const { user_id, search, page, limit } = req.body;
+      const { user_id, search, page, limit, start_date, end_date } = req.body;
       const activity = await MonitoringModel.getWebActivity(
         user_id,
         search,
         page,
         limit,
+        start_date,
+        end_date,
       );
       res.status(200).json({ success: true, data: activity });
     } catch (error) {
@@ -250,12 +268,14 @@ const MonitoringController = {
   // Get Notifications
   async getNotifications(req, res) {
     try {
-      const { user_id, search, page, limit } = req.body;
+      const { user_id, search, page, limit, start_date, end_date } = req.body;
       const notifications = await MonitoringModel.getNotifications(
         user_id,
         search,
         page,
         limit,
+        start_date,
+        end_date,
       );
       res.status(200).json({ success: true, data: notifications });
     } catch (error) {
@@ -276,12 +296,16 @@ const MonitoringController = {
   // Get WhatsApp Chat Logs
   async getWhatsappChatLogs(req, res) {
     try {
-      const { user_id, search, page, limit } = req.body;
+      const { user_id, search, page, limit, start_date, end_date, direction } =
+        req.body;
       const logs = await MonitoringModel.getWhatsappChatLogs(
         user_id,
         search,
         page,
         limit,
+        start_date,
+        end_date,
+        direction,
       );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {
@@ -302,12 +326,16 @@ const MonitoringController = {
   // Get WhatsApp Call Logs
   async getWhatsappCallLogs(req, res) {
     try {
-      const { user_id, search, page, limit } = req.body;
+      const { user_id, search, page, limit, start_date, end_date, direction } =
+        req.body;
       const logs = await MonitoringModel.getWhatsappCallLogs(
         user_id,
         search,
         page,
         limit,
+        start_date,
+        end_date,
+        direction,
       );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {

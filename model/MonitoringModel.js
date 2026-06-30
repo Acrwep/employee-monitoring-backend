@@ -79,13 +79,20 @@ const MonitoringModel = {
     }
   },
 
-  async getCallLogs(user_id, page, limit, search) {
+  async getCallLogs(
+    user_id,
+    page,
+    limit,
+    search,
+    start_date,
+    end_date,
+    call_type,
+  ) {
     try {
       let query = "";
       const params = [];
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM call_logs WHERE user_id = ?";
-      const countParams = [user_id];
+      let countQuery = "SELECT COUNT(*) AS total FROM call_logs WHERE 1 = 1";
+      const countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -108,13 +115,34 @@ const MonitoringModel = {
         WHERE 1 = 1`;
 
       if (search) {
-        query += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
+        query += ` AND (cl.contact_name LIKE ? OR cl.phone_number LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`);
         countQuery += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
         countParams.push(`%${search}%`, `%${search}%`);
       }
 
-      query += ` ORDER BY call_time DESC`;
+      if (user_id) {
+        query += ` AND cl.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (call_type) {
+        query += ` AND cl.call_type LIKE ?`;
+        params.push(`%${call_type}%`);
+        countQuery += ` AND call_type LIKE ?`;
+        countParams.push(`%${call_type}%`);
+      }
+
+      if (start_date && end_date) {
+        query += ` AND cl.call_time >= ? AND cl.call_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND call_time >= ? AND call_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
+      query += ` ORDER BY cl.call_time DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
@@ -165,7 +193,7 @@ const MonitoringModel = {
     }
   },
 
-  async getMessages(user_id, search, page, limit) {
+  async getMessages(user_id, search, page, limit, start_date, end_date) {
     try {
       let query = `SELECT
             m.message_id,
@@ -180,11 +208,10 @@ const MonitoringModel = {
             messages AS m
         INNER JOIN users AS u ON
             m.user_id = u.user_id
-        WHERE m.user_id = ?`;
-      let params = [user_id];
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM messages WHERE user_id = ?";
-      let countParams = [user_id];
+        WHERE 1 = 1`;
+      let params = [];
+      let countQuery = "SELECT COUNT(*) AS total FROM messages WHERE 1 = 1";
+      let countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -192,9 +219,24 @@ const MonitoringModel = {
       if (search) {
         query += ` AND (m.message_body LIKE ? OR m.sender_id LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`);
-        countQuery += ` AND (m.message_body LIKE ? OR m.sender_id LIKE ?)`;
+        countQuery += ` AND (message_body LIKE ? OR sender_id LIKE ?)`;
         countParams.push(`%${search}%`, `%${search}%`);
       }
+
+      if (user_id) {
+        query += ` AND m.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (start_date && end_date) {
+        query += ` AND m.time_periode >= ? AND m.time_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND time_periode >= ? AND time_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
       query += ` ORDER BY m.time_periode DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
@@ -252,7 +294,15 @@ const MonitoringModel = {
     }
   },
 
-  async getRecordings(user_id, source_type = null, search = "", page, limit) {
+  async getRecordings(
+    user_id,
+    source_type = null,
+    search = "",
+    page,
+    limit,
+    start_date,
+    end_date,
+  ) {
     try {
       let query = `SELECT
             r.recording_id,
@@ -270,32 +320,45 @@ const MonitoringModel = {
             recordings AS r
         INNER JOIN users AS u ON
             r.user_id = u.user_id
-        WHERE r.user_id = ?`;
+        WHERE 1 = 1`;
 
-      let params = [user_id];
+      let params = [];
 
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM recordings WHERE user_id = ?";
-      let countParams = [user_id];
+      let countQuery = "SELECT COUNT(*) AS total FROM recordings WHERE 1 = 1";
+      let countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
       const offset = (pageNumber - 1) * limitNumber;
       if (source_type && source_type !== "All") {
-        query += ` AND source_type = ?`;
+        query += ` AND r.source_type = ?`;
         params.push(source_type);
-
         countQuery += ` AND source_type = ?`;
         countParams.push(source_type);
       }
-      if (search) {
-        query += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
-        params.push(`%${search}%`, `%${search}%`);
 
+      if (user_id) {
+        query += ` AND r.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (search) {
+        query += ` AND (r.contact_name LIKE ? OR r.phone_number LIKE ?)`;
+        params.push(`%${search}%`, `%${search}%`);
         countQuery += ` AND (contact_name LIKE ? OR phone_number LIKE ?)`;
         countParams.push(`%${search}%`, `%${search}%`);
       }
-      query += ` ORDER BY time_periode DESC`;
+
+      if (start_date && end_date) {
+        query += ` AND r.time_periode >= ? AND r.time_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND time_periode >= ? AND time_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
+      query += ` ORDER BY r.time_periode DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
@@ -338,7 +401,7 @@ const MonitoringModel = {
     }
   },
 
-  async getWebActivity(user_id, search = "", page, limit) {
+  async getWebActivity(user_id, search, page, limit, start_date, end_date) {
     try {
       let query = `SELECT
             wa.activity_id,
@@ -352,23 +415,37 @@ const MonitoringModel = {
             web_activity AS wa
         INNER JOIN users AS u ON
             wa.user_id = u.user_id
-        WHERE wa.user_id = ?`;
-      let params = [user_id];
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM web_activity WHERE user_id = ?";
-      let countParams = [user_id];
+        WHERE 1 = 1`;
+      let params = [];
+      let countQuery = "SELECT COUNT(*) AS total FROM web_activity WHERE 1 = 1";
+      let countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
       const offset = (pageNumber - 1) * limitNumber;
-      if (search) {
-        query += ` AND website_name LIKE ?`;
-        params.push(`%${search}%`);
 
+      if (search) {
+        query += ` AND wa.website_name LIKE ?`;
+        params.push(`%${search}%`);
         countQuery += ` AND website_name LIKE ?`;
         countParams.push(`%${search}%`);
       }
-      query += ` ORDER BY visit_time DESC`;
+
+      if (user_id) {
+        query += ` AND wa.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (start_date && end_date) {
+        query += ` AND wa.visit_time >= ? AND wa.visit_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND visit_time >= ? AND visit_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
+      query += ` ORDER BY wa.visit_time DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
       const [rows] = await pool.query(query, params);
@@ -463,18 +540,24 @@ const MonitoringModel = {
         FROM app_usage AS au
         INNER JOIN users AS u ON
           au.user_id = u.user_id
-        WHERE au.user_id = ?`;
+        WHERE 1 = 1`;
 
-      params.push(user_id);
+      let countQuery = `SELECT COUNT(*) AS total FROM app_usage WHERE 1 = 1`;
+      let countParams = [];
 
-      if (start_date && end_date) {
-        query += ` AND au.date_periode BETWEEN ? AND ?`;
-        params.push(start_date, end_date);
+      if (user_id) {
+        query += ` AND au.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
       }
 
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM app_usage WHERE user_id = ?";
-      let countParams = [user_id];
+      if (start_date && end_date) {
+        query += ` AND au.date_periode >= ? AND au.date_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND date_periode >= ? AND date_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -527,16 +610,24 @@ const MonitoringModel = {
         FROM screenshots AS s
         INNER JOIN users AS u ON
           s.user_id = u.user_id
-        WHERE s.user_id = ?`;
+        WHERE 1 = 1`;
 
-      if (start_date && end_date) {
-        query += ` AND s.capture_time BETWEEN ? AND ?`;
-        params.push(start_date, end_date);
+      let countQuery = `SELECT COUNT(*) AS total FROM screenshots WHERE 1 = 1`;
+      let countParams = [];
+
+      if (user_id) {
+        query += ` AND s.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
       }
 
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM screenshots WHERE user_id = ?";
-      let countParams = [user_id];
+      if (start_date && end_date) {
+        query += ` AND s.capture_time >= ? AND s.capture_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND capture_time >= ? AND capture_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -586,7 +677,7 @@ const MonitoringModel = {
     }
   },
 
-  async getNotifications(user_id, search = "", page, limit) {
+  async getNotifications(user_id, search, page, limit, start_date, end_date) {
     try {
       let query = `SELECT
             n.notification_id,
@@ -600,11 +691,10 @@ const MonitoringModel = {
         FROM notifications AS n
         INNER JOIN users AS u ON
           n.user_id = u.user_id
-        WHERE n.user_id = ?`;
-      let params = [user_id];
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM notifications WHERE user_id = ?";
-      let countParams = [user_id];
+        WHERE 1 = 1`;
+      let params = [];
+      let countQuery = `SELECT COUNT(*) AS total FROM notifications WHERE 1 = 1`;
+      let countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -613,9 +703,24 @@ const MonitoringModel = {
         query += ` AND (n.title LIKE ? OR n.text_content LIKE ? OR n.app_name LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`, `%${search}%`);
 
-        countQuery += ` AND (n.title LIKE ? OR n.text_content LIKE ? OR n.app_name LIKE ?)`;
+        countQuery += ` AND (title LIKE ? OR text_content LIKE ? OR app_name LIKE ?)`;
         countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
       }
+
+      if (user_id) {
+        query += ` AND n.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (start_date && end_date) {
+        query += ` AND n.post_time >= ? AND n.post_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND post_time >= ? AND post_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
       query += ` ORDER BY n.post_time DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
@@ -653,7 +758,15 @@ const MonitoringModel = {
     }
   },
 
-  async getWhatsappChatLogs(user_id, search = "", page, limit) {
+  async getWhatsappChatLogs(
+    user_id,
+    search,
+    page,
+    limit,
+    start_date,
+    end_date,
+    direction,
+  ) {
     try {
       let query = `SELECT
             wcl.id,
@@ -666,11 +779,10 @@ const MonitoringModel = {
         FROM whatsapp_chat_logs AS wcl
         INNER JOIN users AS u ON
           wcl.user_id = u.user_id
-        WHERE wcl.user_id = ?`;
-      let params = [user_id];
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM whatsapp_chat_logs WHERE user_id = ?";
-      let countParams = [user_id];
+        WHERE 1 = 1`;
+      let params = [];
+      let countQuery = `SELECT COUNT(*) AS total FROM whatsapp_chat_logs WHERE 1 = 1`;
+      let countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -679,10 +791,31 @@ const MonitoringModel = {
       if (search) {
         query += ` AND (wcl.contact_name LIKE ? OR wcl.message LIKE ?)`;
         params.push(`%${search}%`, `%${search}%`);
-
-        countQuery += ` AND (wcl.contact_name LIKE ? OR wcl.message LIKE ?)`;
+        countQuery += ` AND (contact_name LIKE ? OR message LIKE ?)`;
         countParams.push(`%${search}%`, `%${search}%`);
       }
+
+      if (user_id) {
+        query += ` AND wcl.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (direction) {
+        query += ` AND wcl.diraction LIKE ?`;
+        params.push(`%${direction}%`);
+        countQuery += ` AND diraction LIKE ?`;
+        countParams.push(`%${direction}%`);
+      }
+
+      if (start_date && end_date) {
+        query += ` AND wcl.created_at >= ? AND wcl.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
       query += ` ORDER BY wcl.created_at DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
@@ -733,7 +866,15 @@ const MonitoringModel = {
     }
   },
 
-  async getWhatsappCallLogs(user_id, search = "", page, limit) {
+  async getWhatsappCallLogs(
+    user_id,
+    search,
+    page,
+    limit,
+    start_date,
+    end_date,
+    direction,
+  ) {
     try {
       let query = `SELECT
             wcl.id,
@@ -747,11 +888,10 @@ const MonitoringModel = {
         FROM whatsapp_call_logs AS wcl
         INNER JOIN users AS u ON
           wcl.user_id = u.user_id
-        WHERE wcl.user_id = ?`;
-      let params = [user_id];
-      let countQuery =
-        "SELECT COUNT(*) AS total FROM whatsapp_call_logs WHERE user_id = ?";
-      let countParams = [user_id];
+        WHERE 1 = 1`;
+      let params = [];
+      let countQuery = `SELECT COUNT(*) AS total FROM whatsapp_call_logs WHERE 1 = 1`;
+      let countParams = [];
 
       const pageNumber = parseInt(page, 10) || 1;
       const limitNumber = parseInt(limit, 10) || 10;
@@ -760,10 +900,31 @@ const MonitoringModel = {
       if (search) {
         query += ` AND wcl.contact_name LIKE ?`;
         params.push(`%${search}%`);
-
-        countQuery += ` AND wcl.contact_name LIKE ?`;
+        countQuery += ` AND contact_name LIKE ?`;
         countParams.push(`%${search}%`);
       }
+
+      if (user_id) {
+        query += ` AND wcl.user_id = ?`;
+        params.push(user_id);
+        countQuery += ` AND user_id = ?`;
+        countParams.push(user_id);
+      }
+
+      if (direction) {
+        query += ` AND wcl.diraction LIKE ?`;
+        params.push(`%${direction}%`);
+        countQuery += ` AND diraction LIKE ?`;
+        countParams.push(`%${direction}%`);
+      }
+
+      if (start_date && end_date) {
+        query += ` AND wcl.created_at >= ? AND wcl.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+        params.push(start_date, end_date);
+        countQuery += ` AND created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+        countParams.push(start_date, end_date);
+      }
+
       query += ` ORDER BY wcl.created_at DESC`;
       query += ` LIMIT ? OFFSET ?`;
       params.push(limitNumber, offset);
