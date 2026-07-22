@@ -52,15 +52,159 @@ const DashboardModel = {
   },
 
   getDashboardSummary: async (filters) => {
-    const { branch_id, user_id, start_date, end_date } = filters;
+    const { branch_id, category_id, user_id, start_date, end_date } = filters;
+    const activeBranchId = branch_id || category_id;
 
     try {
+      if (filters.group_by === 'branch') {
+        const branchSql = `SELECT id as branch_id, name FROM category WHERE is_active = 1`;
+        const [branches] = await pool.query(branchSql);
+
+        if (branches.length === 0) return [];
+
+        const branchIds = branches.map(b => b.branch_id);
+        
+        let branchDateFilterCallLogs = "";
+        let branchDateFilterMessages = "";
+        let branchDateFilterWaCalls = "";
+        let branchDateFilterWaChats = "";
+        let dateParams = [];
+
+        if (start_date && end_date) {
+          branchDateFilterCallLogs = ` AND c.call_time >= ? AND c.call_time < DATE_ADD(?, INTERVAL 1 DAY)`;
+          branchDateFilterMessages = ` AND m.time_periode >= ? AND m.time_periode < DATE_ADD(?, INTERVAL 1 DAY)`;
+          branchDateFilterWaCalls = ` AND w.created_at >= ? AND w.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+          branchDateFilterWaChats = ` AND w.created_at >= ? AND w.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+          dateParams = [start_date, end_date];
+        }
+
+        const phoneCallsSql = `
+          SELECT u.category_id as branch_id, 
+            COUNT(c.call_id) as total_calls,
+            SUM(CASE WHEN LOWER(c.call_type) = 'outgoing' THEN 1 ELSE 0 END) as outgoing,
+            SUM(CASE WHEN LOWER(c.call_type) = 'incoming' THEN 1 ELSE 0 END) as incoming,
+            SUM(CASE WHEN LOWER(c.call_type) = 'missed' THEN 1 ELSE 0 END) as missed,
+            SUM(c.duration) as total_duration,
+            COUNT(DISTINCT c.user_id) as sync_count
+          FROM call_logs c
+          JOIN users u ON c.user_id = u.user_id
+          WHERE u.category_id IN (?) ${branchDateFilterCallLogs}
+          GROUP BY u.category_id
+        `;
+
+        const messagesSql = `
+          SELECT u.category_id as branch_id, 
+            COUNT(m.message_id) as chats_sms,
+            COUNT(DISTINCT m.user_id) as sync_count
+          FROM messages m
+          JOIN users u ON m.user_id = u.user_id
+          WHERE u.category_id IN (?) ${branchDateFilterMessages}
+          GROUP BY u.category_id
+        `;
+
+        const waCallsSql = `
+          SELECT u.category_id as branch_id, 
+            COUNT(w.id) as total_calls,
+            SUM(CASE WHEN LOWER(w.diraction) = 'outgoing' THEN 1 ELSE 0 END) as outgoing,
+            SUM(CASE WHEN LOWER(w.diraction) = 'incoming' THEN 1 ELSE 0 END) as incoming,
+            SUM(CASE WHEN LOWER(w.diraction) = 'missed' THEN 1 ELSE 0 END) as missed,
+            SUM(w.duration) as total_duration,
+            COUNT(DISTINCT w.user_id) as sync_count
+          FROM whatsapp_call_logs w
+          JOIN users u ON w.user_id = u.user_id
+          WHERE u.category_id IN (?) ${branchDateFilterWaCalls}
+          GROUP BY u.category_id
+        `;
+
+        const waChatsSql = `
+          SELECT u.category_id as branch_id, 
+            COUNT(w.id) as chats_sms,
+            COUNT(DISTINCT w.user_id) as sync_count
+          FROM whatsapp_chat_logs w
+          JOIN users u ON w.user_id = u.user_id
+          WHERE u.category_id IN (?) ${branchDateFilterWaChats}
+          GROUP BY u.category_id
+        `;
+
+        const [[phoneCalls], [phoneMessages], [waCalls], [waChats]] =
+          await Promise.all([
+            pool.query(phoneCallsSql, [branchIds, ...dateParams]),
+            pool.query(messagesSql, [branchIds, ...dateParams]),
+            pool.query(waCallsSql, [branchIds, ...dateParams]),
+            pool.query(waChatsSql, [branchIds, ...dateParams]),
+          ]);
+
+        const formatDuration = (seconds) => {
+          if (!seconds || isNaN(seconds)) return "00:00:00";
+          const h = Math.floor(seconds / 3600)
+            .toString()
+            .padStart(2, "0");
+          const m = Math.floor((seconds % 3600) / 60)
+            .toString()
+            .padStart(2, "0");
+          const s = Math.floor(seconds % 60)
+            .toString()
+            .padStart(2, "0");
+          return `${h}:${m}:${s}`;
+        };
+
+        const pCallsMap = new Map(phoneCalls.map((p) => [String(p.branch_id), p]));
+        const pMsgsMap = new Map(
+          phoneMessages.map((p) => [String(p.branch_id), p]),
+        );
+        const wCallsMap = new Map(waCalls.map((w) => [String(w.branch_id), w]));
+        const wChatsMap = new Map(waChats.map((w) => [String(w.branch_id), w]));
+
+        const results = branches.map((branch) => {
+          const bIdStr = String(branch.branch_id);
+          const pCalls = pCallsMap.get(bIdStr) || {};
+          const pMsgs = pMsgsMap.get(bIdStr) || {};
+          const wCalls = wCallsMap.get(bIdStr) || {};
+          const wChats = wChatsMap.get(bIdStr) || {};
+
+          const getMaxDate = (d1, d2) => {
+            if (!d1) return d2;
+            if (!d2) return d1;
+            return new Date(d1) > new Date(d2) ? d1 : d2;
+          };
+
+          return {
+            branch_id: branch.branch_id,
+            name: branch.name,
+            device_monitoring_summary: [
+              {
+                platform: "Phone Call",
+                total_calls: pCalls.total_calls || 0,
+                outgoing: pCalls.outgoing || 0,
+                incoming: pCalls.incoming || 0,
+                missed: pCalls.missed || 0,
+                total_duration: formatDuration(pCalls.total_duration || 0),
+                chats_sms: pMsgs.chats_sms || "--",
+                last_sync: Math.max(pCalls.sync_count || 0, pMsgs.sync_count || 0),
+              },
+              {
+                platform: "WhatsApp",
+                total_calls: wCalls.total_calls || 0,
+                outgoing: wCalls.outgoing || 0,
+                incoming: wCalls.incoming || 0,
+                missed: wCalls.missed || 0,
+                total_duration: formatDuration(wCalls.total_duration || 0),
+                chats_sms: wChats.chats_sms || 0,
+                last_sync: Math.max(wCalls.sync_count || 0, wChats.sync_count || 0),
+              },
+            ],
+          };
+        });
+
+        return results;
+      }
+
       let userSql = `SELECT user_id, full_name as name FROM users WHERE 1=1`;
       const userParams = [];
 
-      if (branch_id) {
+      if (activeBranchId) {
         userSql += ` AND category_id = ?`;
-        userParams.push(branch_id);
+        userParams.push(activeBranchId);
       }
       if (user_id) {
         userSql += ` AND user_id = ?`;

@@ -87,6 +87,7 @@ const MonitoringModel = {
     start_date,
     end_date,
     call_type,
+    category_id,
   ) {
     try {
       let query = "";
@@ -133,6 +134,13 @@ const MonitoringModel = {
         params.push(`%${call_type}%`);
         countQuery += ` AND call_type LIKE ?`;
         countParams.push(`%${call_type}%`);
+      }
+
+      if (category_id) {
+        query += ` AND u.category_id = ?`;
+        params.push(category_id);
+        countQuery += ` AND user_id IN (SELECT user_id FROM users WHERE category_id = ?)`;
+        countParams.push(category_id);
       }
 
       if (start_date && end_date) {
@@ -193,7 +201,7 @@ const MonitoringModel = {
     }
   },
 
-  async getMessages(user_id, search, page, limit, start_date, end_date) {
+  async getMessages(user_id, search, page, limit, start_date, end_date, category_id) {
     try {
       let query = `SELECT
             m.message_id,
@@ -228,6 +236,13 @@ const MonitoringModel = {
         params.push(user_id);
         countQuery += ` AND user_id = ?`;
         countParams.push(user_id);
+      }
+
+      if (category_id) {
+        query += ` AND u.category_id = ?`;
+        params.push(category_id);
+        countQuery += ` AND user_id IN (SELECT user_id FROM users WHERE category_id = ?)`;
+        countParams.push(category_id);
       }
 
       if (start_date && end_date) {
@@ -766,6 +781,7 @@ const MonitoringModel = {
     start_date,
     end_date,
     direction,
+    category_id,
   ) {
     try {
       let query = `SELECT
@@ -807,6 +823,13 @@ const MonitoringModel = {
         params.push(`%${direction}%`);
         countQuery += ` AND diraction LIKE ?`;
         countParams.push(`%${direction}%`);
+      }
+
+      if (category_id) {
+        query += ` AND u.category_id = ?`;
+        params.push(category_id);
+        countQuery += ` AND user_id IN (SELECT user_id FROM users WHERE category_id = ?)`;
+        countParams.push(category_id);
       }
 
       if (start_date && end_date) {
@@ -874,6 +897,7 @@ const MonitoringModel = {
     start_date,
     end_date,
     direction,
+    category_id,
   ) {
     try {
       let query = `SELECT
@@ -918,6 +942,13 @@ const MonitoringModel = {
         countParams.push(`%${direction}%`);
       }
 
+      if (category_id) {
+        query += ` AND u.category_id = ?`;
+        params.push(category_id);
+        countQuery += ` AND user_id IN (SELECT user_id FROM users WHERE category_id = ?)`;
+        countParams.push(category_id);
+      }
+
       if (start_date && end_date) {
         query += ` AND wcl.created_at >= ? AND wcl.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
         params.push(start_date, end_date);
@@ -948,7 +979,8 @@ const MonitoringModel = {
   },
 
   getUsers: async (filter) => {
-    const { branch_id, user_id } = filter;
+    const { branch_id, category_id, user_id } = filter;
+    const activeBranchId = branch_id || category_id;
     let params = [];
     try {
       let query = `SELECT
@@ -960,9 +992,9 @@ const MonitoringModel = {
             users
         WHERE 1 = 1`;
 
-      if (branch_id) {
+      if (activeBranchId) {
         query += " AND category_id = ?";
-        params.push(branch_id);
+        params.push(activeBranchId);
       }
       if (user_id) {
         query += " AND user_id = ?";

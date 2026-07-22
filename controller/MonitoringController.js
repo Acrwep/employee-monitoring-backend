@@ -81,7 +81,7 @@ const MonitoringController = {
   // Get Call Logs
   async getCallLogs(req, res) {
     try {
-      const { user_id, page, limit, search, start_date, end_date, call_type } =
+      const { user_id, page, limit, search, start_date, end_date, call_type, category_id } =
         req.body;
       const logs = await MonitoringModel.getCallLogs(
         user_id,
@@ -91,6 +91,7 @@ const MonitoringController = {
         start_date,
         end_date,
         call_type,
+        category_id,
       );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {
@@ -111,7 +112,7 @@ const MonitoringController = {
   // Get Messages (Input Intelligence)
   async getMessages(req, res) {
     try {
-      const { user_id, search, page, limit, start_date, end_date } = req.body;
+      const { user_id, search, page, limit, start_date, end_date, category_id } = req.body;
       const messages = await MonitoringModel.getMessages(
         user_id,
         search,
@@ -119,6 +120,7 @@ const MonitoringController = {
         limit,
         start_date,
         end_date,
+        category_id,
       );
       res.status(200).json({ success: true, data: messages });
     } catch (error) {
@@ -296,7 +298,7 @@ const MonitoringController = {
   // Get WhatsApp Chat Logs
   async getWhatsappChatLogs(req, res) {
     try {
-      const { user_id, search, page, limit, start_date, end_date, direction } =
+      const { user_id, search, page, limit, start_date, end_date, direction, category_id } =
         req.body;
       const logs = await MonitoringModel.getWhatsappChatLogs(
         user_id,
@@ -306,6 +308,7 @@ const MonitoringController = {
         start_date,
         end_date,
         direction,
+        category_id,
       );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {
@@ -326,7 +329,7 @@ const MonitoringController = {
   // Get WhatsApp Call Logs
   async getWhatsappCallLogs(req, res) {
     try {
-      const { user_id, search, page, limit, start_date, end_date, direction } =
+      const { user_id, search, page, limit, start_date, end_date, direction, category_id } =
         req.body;
       const logs = await MonitoringModel.getWhatsappCallLogs(
         user_id,
@@ -336,6 +339,7 @@ const MonitoringController = {
         start_date,
         end_date,
         direction,
+        category_id,
       );
       res.status(200).json({ success: true, data: logs });
     } catch (error) {
