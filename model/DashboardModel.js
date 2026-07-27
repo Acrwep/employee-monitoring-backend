@@ -126,12 +126,20 @@ const DashboardModel = {
           GROUP BY u.category_id
         `;
 
-        const [[phoneCalls], [phoneMessages], [waCalls], [waChats]] =
+        const totalUsersSql = `
+          SELECT category_id as branch_id, COUNT(user_id) as total_users 
+          FROM users 
+          WHERE category_id IN (?) 
+          GROUP BY category_id
+        `;
+
+        const [[phoneCalls], [phoneMessages], [waCalls], [waChats], [totalUsers]] =
           await Promise.all([
             pool.query(phoneCallsSql, [branchIds, ...dateParams]),
             pool.query(messagesSql, [branchIds, ...dateParams]),
             pool.query(waCallsSql, [branchIds, ...dateParams]),
             pool.query(waChatsSql, [branchIds, ...dateParams]),
+            pool.query(totalUsersSql, [branchIds]),
           ]);
 
         const formatDuration = (seconds) => {
@@ -154,6 +162,7 @@ const DashboardModel = {
         );
         const wCallsMap = new Map(waCalls.map((w) => [String(w.branch_id), w]));
         const wChatsMap = new Map(waChats.map((w) => [String(w.branch_id), w]));
+        const tUsersMap = new Map(totalUsers.map((t) => [String(t.branch_id), t]));
 
         const results = branches.map((branch) => {
           const bIdStr = String(branch.branch_id);
@@ -161,6 +170,9 @@ const DashboardModel = {
           const pMsgs = pMsgsMap.get(bIdStr) || {};
           const wCalls = wCallsMap.get(bIdStr) || {};
           const wChats = wChatsMap.get(bIdStr) || {};
+          const tUsers = tUsersMap.get(bIdStr) || {};
+
+          const totalUsersCount = tUsers.total_users || 0;
 
           const getMaxDate = (d1, d2) => {
             if (!d1) return d2;
@@ -180,7 +192,7 @@ const DashboardModel = {
                 missed: pCalls.missed || 0,
                 total_duration: formatDuration(pCalls.total_duration || 0),
                 chats_sms: pMsgs.chats_sms || "--",
-                last_sync: Math.max(pCalls.sync_count || 0, pMsgs.sync_count || 0),
+                last_sync: `${Math.max(pCalls.sync_count || 0, pMsgs.sync_count || 0)}/${totalUsersCount}`,
               },
               {
                 platform: "WhatsApp",
@@ -190,7 +202,7 @@ const DashboardModel = {
                 missed: wCalls.missed || 0,
                 total_duration: formatDuration(wCalls.total_duration || 0),
                 chats_sms: wChats.chats_sms || 0,
-                last_sync: Math.max(wCalls.sync_count || 0, wChats.sync_count || 0),
+                last_sync: `${Math.max(wCalls.sync_count || 0, wChats.sync_count || 0)}/${totalUsersCount}`,
               },
             ],
           };

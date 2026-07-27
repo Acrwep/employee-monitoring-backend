@@ -987,7 +987,9 @@ const MonitoringModel = {
             user_id,
             full_name,
             email,
-            mobile_number
+            mobile_number,
+            user_code,
+            category_id
         FROM
             users
         WHERE 1 = 1`;
