@@ -39,7 +39,7 @@ const MonitoringModel = {
   async getUserByMobileNumber(mobile_number) {
     try {
       const [rows] = await pool.execute(
-        `SELECT user_id, full_name, mobile_number, password_hash FROM users WHERE mobile_number = ?`,
+        `SELECT user_id, full_name, mobile_number, password_hash, category_id FROM users WHERE mobile_number = ?`,
         [mobile_number],
       );
       return rows[0];
@@ -979,27 +979,37 @@ const MonitoringModel = {
   },
 
   getUsers: async (filter) => {
-    const { branch_id, category_id, user_id } = filter;
+    const { branch_id, category_id, user_id, manager_id } = filter;
     const activeBranchId = branch_id || category_id;
     let params = [];
     try {
       let query = `SELECT
-            user_id,
-            full_name,
-            email,
-            mobile_number,
-            user_code,
-            category_id
+            u.user_id,
+            u.full_name,
+            u.email,
+            u.mobile_number,
+            u.user_code,
+            u.category_id
         FROM
-            users
-        WHERE 1 = 1`;
+            users u`;
+
+      if (manager_id) {
+        query += ` INNER JOIN assign_manager am ON u.user_id = am.user_id`;
+      }
+
+      query += ` WHERE 1 = 1`;
+
+      if (manager_id) {
+        query += ` AND am.manager_id = ?`;
+        params.push(manager_id);
+      }
 
       if (activeBranchId) {
-        query += " AND category_id = ?";
+        query += " AND u.category_id = ?";
         params.push(activeBranchId);
       }
       if (user_id) {
-        query += " AND user_id = ?";
+        query += " AND u.user_id = ?";
         params.push(user_id);
       }
       const [rows] = await pool.query(query, params);

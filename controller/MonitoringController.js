@@ -51,6 +51,7 @@ const MonitoringController = {
         user_id: user.user_id,
         full_name: user.full_name,
         mobile_number: user.mobile_number,
+        category_id: user.category_id
       });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });

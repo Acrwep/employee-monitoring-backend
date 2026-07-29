@@ -63,7 +63,7 @@ const DashboardModel = {
         if (branches.length === 0) return [];
 
         const branchIds = branches.map(b => b.branch_id);
-        
+
         let branchDateFilterCallLogs = "";
         let branchDateFilterMessages = "";
         let branchDateFilterWaCalls = "";
