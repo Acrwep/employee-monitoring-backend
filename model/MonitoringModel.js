@@ -1031,9 +1031,11 @@ const MonitoringModel = {
             u.email,
             u.mobile_number,
             u.user_code,
-            u.category_id
+            u.category_id,
+            c.name as branch_name
         FROM
-            users u`;
+            users u
+        LEFT JOIN category c ON u.category_id = c.id`;
 
       if (manager_id) {
         query += ` INNER JOIN assign_manager am ON u.user_id = am.user_id`;
