@@ -52,7 +52,7 @@ const DashboardModel = {
   },
 
   getDashboardSummary: async (filters) => {
-    const { branch_id, category_id, user_id, start_date, end_date } = filters;
+    const { branch_id, category_id, user_id, start_date, end_date, manager_id } = filters;
     const activeBranchId = branch_id || category_id;
 
     try {
@@ -78,6 +78,15 @@ const DashboardModel = {
           dateParams = [start_date, end_date];
         }
 
+        let managerJoin = "";
+        let managerWhere = "";
+        let managerParams = [];
+        if (manager_id) {
+          managerJoin = " JOIN assign_manager am ON u.user_id = am.user_id ";
+          managerWhere = " AND am.manager_id = ? ";
+          managerParams.push(manager_id);
+        }
+
         const phoneCallsSql = `
           SELECT u.category_id as branch_id, 
             COUNT(c.call_id) as total_calls,
@@ -88,7 +97,8 @@ const DashboardModel = {
             COUNT(DISTINCT c.user_id) as sync_count
           FROM call_logs c
           JOIN users u ON c.user_id = u.user_id
-          WHERE u.category_id IN (?) ${branchDateFilterCallLogs}
+          ${managerJoin}
+          WHERE u.category_id IN (?) ${branchDateFilterCallLogs} ${managerWhere}
           GROUP BY u.category_id
         `;
 
@@ -98,7 +108,8 @@ const DashboardModel = {
             COUNT(DISTINCT m.user_id) as sync_count
           FROM messages m
           JOIN users u ON m.user_id = u.user_id
-          WHERE u.category_id IN (?) ${branchDateFilterMessages}
+          ${managerJoin}
+          WHERE u.category_id IN (?) ${branchDateFilterMessages} ${managerWhere}
           GROUP BY u.category_id
         `;
 
@@ -112,7 +123,8 @@ const DashboardModel = {
             COUNT(DISTINCT w.user_id) as sync_count
           FROM whatsapp_call_logs w
           JOIN users u ON w.user_id = u.user_id
-          WHERE u.category_id IN (?) ${branchDateFilterWaCalls}
+          ${managerJoin}
+          WHERE u.category_id IN (?) ${branchDateFilterWaCalls} ${managerWhere}
           GROUP BY u.category_id
         `;
 
@@ -122,24 +134,26 @@ const DashboardModel = {
             COUNT(DISTINCT w.user_id) as sync_count
           FROM whatsapp_chat_logs w
           JOIN users u ON w.user_id = u.user_id
-          WHERE u.category_id IN (?) ${branchDateFilterWaChats}
+          ${managerJoin}
+          WHERE u.category_id IN (?) ${branchDateFilterWaChats} ${managerWhere}
           GROUP BY u.category_id
         `;
 
         const totalUsersSql = `
-          SELECT category_id as branch_id, COUNT(user_id) as total_users 
-          FROM users 
-          WHERE category_id IN (?) 
-          GROUP BY category_id
+          SELECT u.category_id as branch_id, COUNT(u.user_id) as total_users 
+          FROM users u
+          ${managerJoin}
+          WHERE u.category_id IN (?) ${managerWhere}
+          GROUP BY u.category_id
         `;
 
         const [[phoneCalls], [phoneMessages], [waCalls], [waChats], [totalUsers]] =
           await Promise.all([
-            pool.query(phoneCallsSql, [branchIds, ...dateParams]),
-            pool.query(messagesSql, [branchIds, ...dateParams]),
-            pool.query(waCallsSql, [branchIds, ...dateParams]),
-            pool.query(waChatsSql, [branchIds, ...dateParams]),
-            pool.query(totalUsersSql, [branchIds]),
+            pool.query(phoneCallsSql, [branchIds, ...dateParams, ...managerParams]),
+            pool.query(messagesSql, [branchIds, ...dateParams, ...managerParams]),
+            pool.query(waCallsSql, [branchIds, ...dateParams, ...managerParams]),
+            pool.query(waChatsSql, [branchIds, ...dateParams, ...managerParams]),
+            pool.query(totalUsersSql, [branchIds, ...managerParams]),
           ]);
 
         const formatDuration = (seconds) => {
@@ -211,15 +225,20 @@ const DashboardModel = {
         return results;
       }
 
-      let userSql = `SELECT user_id, full_name as name FROM users WHERE 1=1`;
+      let userSql = `SELECT u.user_id, u.full_name as name FROM users u WHERE 1=1`;
       const userParams = [];
 
+      if (manager_id) {
+        userSql = `SELECT u.user_id, u.full_name as name FROM users u JOIN assign_manager am ON u.user_id = am.user_id WHERE am.manager_id = ?`;
+        userParams.push(manager_id);
+      }
+
       if (activeBranchId) {
-        userSql += ` AND category_id = ?`;
+        userSql += ` AND u.category_id = ?`;
         userParams.push(activeBranchId);
       }
       if (user_id) {
-        userSql += ` AND user_id = ?`;
+        userSql += ` AND u.user_id = ?`;
         userParams.push(user_id);
       }
 

@@ -31,13 +31,13 @@ const MonitoringController = {
 
   async login(req, res) {
     try {
-      const { mobile_number, password } = req.body;
-      const user = await MonitoringModel.getUserByMobileNumber(mobile_number);
+      const { user_code, password } = req.body;
+      const user = await MonitoringModel.getUserByUserCode(user_code);
       if (!user || user.password_hash !== password) {
         // Note: In production use bcrypt for password hashing
         return res.status(401).json({
           success: false,
-          message: "Invalid phone number or password",
+          message: "Invalid user code or password",
         });
       }
       const token = jwt.sign(
@@ -49,6 +49,7 @@ const MonitoringController = {
         success: true,
         token,
         user_id: user.user_id,
+        user_code: user.user_code,
         full_name: user.full_name,
         mobile_number: user.mobile_number,
         category_id: user.category_id
@@ -343,6 +344,16 @@ const MonitoringController = {
         category_id,
       );
       res.status(200).json({ success: true, data: logs });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // Assign Manager
+  async assignManager(req, res) {
+    try {
+      const result = await MonitoringModel.assignManager(req.body);
+      res.status(200).json({ success: true, message: "Manager assigned successfully", data: result });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }

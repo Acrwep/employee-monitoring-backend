@@ -61,5 +61,6 @@ router.post("/add-whatsapp-call-logs", MonitoringController.addWhatsappCallLog);
 router.post("/whatsapp-call-logs", MonitoringController.getWhatsappCallLogs);
 
 router.get("/users", MonitoringController.getUsers);
+router.post("/assign-manager", MonitoringController.assignManager);
 
 module.exports = router;
