@@ -270,8 +270,7 @@ const DashboardModel = {
           SUM(CASE WHEN LOWER(call_type) = 'outgoing' THEN 1 ELSE 0 END) as outgoing,
           SUM(CASE WHEN LOWER(call_type) = 'incoming' THEN 1 ELSE 0 END) as incoming,
           SUM(CASE WHEN LOWER(call_type) = 'missed' THEN 1 ELSE 0 END) as missed,
-          SUM(duration) as total_duration,
-          MAX(call_time) as last_sync
+          SUM(duration) as total_duration
         FROM call_logs
         WHERE user_id IN (?) ${dateFilterCallLogs}
         GROUP BY user_id
@@ -279,8 +278,7 @@ const DashboardModel = {
 
       const messagesSql = `
         SELECT user_id, 
-          COUNT(message_id) as chats_sms,
-          MAX(time_periode) as last_sync
+          COUNT(message_id) as chats_sms
         FROM messages
         WHERE user_id IN (?) ${dateFilterMessages}
         GROUP BY user_id
@@ -292,8 +290,7 @@ const DashboardModel = {
           SUM(CASE WHEN LOWER(diraction) = 'outgoing' THEN 1 ELSE 0 END) as outgoing,
           SUM(CASE WHEN LOWER(diraction) = 'incoming' THEN 1 ELSE 0 END) as incoming,
           SUM(CASE WHEN LOWER(diraction) = 'missed' THEN 1 ELSE 0 END) as missed,
-          SUM(duration) as total_duration,
-          MAX(created_at) as last_sync
+          SUM(duration) as total_duration
         FROM whatsapp_call_logs
         WHERE user_id IN (?) ${dateFilterWaCalls}
         GROUP BY user_id
@@ -301,20 +298,29 @@ const DashboardModel = {
 
       const waChatsSql = `
         SELECT user_id, 
-          COUNT(id) as chats_sms,
-          MAX(created_at) as last_sync
+          COUNT(id) as chats_sms
         FROM whatsapp_chat_logs
         WHERE user_id IN (?) ${dateFilterWaChats}
         GROUP BY user_id
       `;
 
+      // Absolute last sync queries (ignoring date filters)
+      const phoneSyncSql = `SELECT user_id, MAX(call_time) as last_sync FROM call_logs WHERE user_id IN (?) GROUP BY user_id`;
+      const msgSyncSql = `SELECT user_id, MAX(time_periode) as last_sync FROM messages WHERE user_id IN (?) GROUP BY user_id`;
+      const waCallSyncSql = `SELECT user_id, MAX(created_at) as last_sync FROM whatsapp_call_logs WHERE user_id IN (?) GROUP BY user_id`;
+      const waChatSyncSql = `SELECT user_id, MAX(created_at) as last_sync FROM whatsapp_chat_logs WHERE user_id IN (?) GROUP BY user_id`;
+
       // Execute all queries concurrently for optimization
-      const [[phoneCalls], [phoneMessages], [waCalls], [waChats]] =
+      const [[phoneCalls], [phoneMessages], [waCalls], [waChats], [phoneSync], [msgSync], [waCallSync], [waChatSync]] =
         await Promise.all([
           pool.query(phoneCallsSql, [userIds, ...dateParams]),
           pool.query(messagesSql, [userIds, ...dateParams]),
           pool.query(waCallsSql, [userIds, ...dateParams]),
           pool.query(waChatsSql, [userIds, ...dateParams]),
+          pool.query(phoneSyncSql, [userIds]),
+          pool.query(msgSyncSql, [userIds]),
+          pool.query(waCallSyncSql, [userIds]),
+          pool.query(waChatSyncSql, [userIds]),
         ]);
 
       const formatDuration = (seconds) => {
@@ -339,12 +345,22 @@ const DashboardModel = {
       const wCallsMap = new Map(waCalls.map((w) => [String(w.user_id), w]));
       const wChatsMap = new Map(waChats.map((w) => [String(w.user_id), w]));
 
+      const pSyncMap = new Map(phoneSync.map((p) => [String(p.user_id), p]));
+      const msgSyncMap = new Map(msgSync.map((p) => [String(p.user_id), p]));
+      const waCallSyncMap = new Map(waCallSync.map((w) => [String(w.user_id), w]));
+      const waChatSyncMap = new Map(waChatSync.map((w) => [String(w.user_id), w]));
+
       const results = users.map((user) => {
         const userIdStr = String(user.user_id);
         const pCalls = pCallsMap.get(userIdStr) || {};
         const pMsgs = pMsgsMap.get(userIdStr) || {};
         const wCalls = wCallsMap.get(userIdStr) || {};
         const wChats = wChatsMap.get(userIdStr) || {};
+
+        const pSync = pSyncMap.get(userIdStr) || {};
+        const mSync = msgSyncMap.get(userIdStr) || {};
+        const wCSync = waCallSyncMap.get(userIdStr) || {};
+        const wMSync = waChatSyncMap.get(userIdStr) || {};
 
         const getMaxDate = (d1, d2) => {
           if (!d1) return d2;
@@ -364,7 +380,7 @@ const DashboardModel = {
               missed: pCalls.missed || 0,
               total_duration: formatDuration(pCalls.total_duration || 0),
               chats_sms: pMsgs.chats_sms || "--",
-              last_sync: getMaxDate(pCalls.last_sync, pMsgs.last_sync) || "--",
+              last_sync: getMaxDate(pSync.last_sync, mSync.last_sync) || "--",
             },
             {
               platform: "WhatsApp",
@@ -374,7 +390,7 @@ const DashboardModel = {
               missed: wCalls.missed || 0,
               total_duration: formatDuration(wCalls.total_duration || 0),
               chats_sms: wChats.chats_sms || 0,
-              last_sync: getMaxDate(wCalls.last_sync, wChats.last_sync) || "--",
+              last_sync: getMaxDate(wCSync.last_sync, wMSync.last_sync) || "--",
             },
           ],
         };
