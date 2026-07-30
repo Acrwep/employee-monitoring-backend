@@ -39,8 +39,8 @@ const MonitoringModel = {
   async getUserByUserCode(user_code) {
     try {
       const [rows] = await pool.execute(
-        `SELECT user_id, user_code, full_name, mobile_number, password_hash, category_id FROM users WHERE user_code = ?`,
-        [user_code],
+        `SELECT user_id, user_code, full_name, mobile_number, password_hash, category_id FROM users WHERE (user_code = ? OR mobile_number = ?)`,
+        [user_code, user_code],
       );
       return rows[0];
     } catch (error) {
@@ -213,7 +213,15 @@ const MonitoringModel = {
     }
   },
 
-  async getMessages(user_id, search, page, limit, start_date, end_date, category_id) {
+  async getMessages(
+    user_id,
+    search,
+    page,
+    limit,
+    start_date,
+    end_date,
+    category_id,
+  ) {
     try {
       let query = `SELECT
             m.message_id,
@@ -993,25 +1001,25 @@ const MonitoringModel = {
   assignManager: async (assignmentData) => {
     try {
       const { user_id, manager_id } = assignmentData;
-      
+
       // Check if user already has an assigned manager
       const [existing] = await pool.query(
         `SELECT id FROM assign_manager WHERE user_id = ?`,
-        [user_id]
+        [user_id],
       );
 
       if (existing.length > 0) {
         // Update existing record
         const [result] = await pool.query(
           `UPDATE assign_manager SET manager_id = ? WHERE user_id = ?`,
-          [manager_id, user_id]
+          [manager_id, user_id],
         );
         return result.affectedRows;
       } else {
         // Insert new record
         const [result] = await pool.query(
           `INSERT INTO assign_manager (user_id, manager_id) VALUES (?, ?)`,
-          [user_id, manager_id]
+          [user_id, manager_id],
         );
         return result.affectedRows;
       }

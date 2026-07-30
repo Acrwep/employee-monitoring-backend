@@ -34,7 +34,6 @@ const MonitoringController = {
       const { user_code, password } = req.body;
       const user = await MonitoringModel.getUserByUserCode(user_code);
       if (!user || user.password_hash !== password) {
-        // Note: In production use bcrypt for password hashing
         return res.status(401).json({
           success: false,
           message: "Invalid user code or password",
@@ -52,7 +51,7 @@ const MonitoringController = {
         user_code: user.user_code,
         full_name: user.full_name,
         mobile_number: user.mobile_number,
-        category_id: user.category_id
+        category_id: user.category_id,
       });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -83,8 +82,16 @@ const MonitoringController = {
   // Get Call Logs
   async getCallLogs(req, res) {
     try {
-      const { user_id, page, limit, search, start_date, end_date, call_type, category_id } =
-        req.body;
+      const {
+        user_id,
+        page,
+        limit,
+        search,
+        start_date,
+        end_date,
+        call_type,
+        category_id,
+      } = req.body;
       const logs = await MonitoringModel.getCallLogs(
         user_id,
         page,
@@ -114,7 +121,15 @@ const MonitoringController = {
   // Get Messages (Input Intelligence)
   async getMessages(req, res) {
     try {
-      const { user_id, search, page, limit, start_date, end_date, category_id } = req.body;
+      const {
+        user_id,
+        search,
+        page,
+        limit,
+        start_date,
+        end_date,
+        category_id,
+      } = req.body;
       const messages = await MonitoringModel.getMessages(
         user_id,
         search,
@@ -300,8 +315,16 @@ const MonitoringController = {
   // Get WhatsApp Chat Logs
   async getWhatsappChatLogs(req, res) {
     try {
-      const { user_id, search, page, limit, start_date, end_date, direction, category_id } =
-        req.body;
+      const {
+        user_id,
+        search,
+        page,
+        limit,
+        start_date,
+        end_date,
+        direction,
+        category_id,
+      } = req.body;
       const logs = await MonitoringModel.getWhatsappChatLogs(
         user_id,
         search,
@@ -331,8 +354,16 @@ const MonitoringController = {
   // Get WhatsApp Call Logs
   async getWhatsappCallLogs(req, res) {
     try {
-      const { user_id, search, page, limit, start_date, end_date, direction, category_id } =
-        req.body;
+      const {
+        user_id,
+        search,
+        page,
+        limit,
+        start_date,
+        end_date,
+        direction,
+        category_id,
+      } = req.body;
       const logs = await MonitoringModel.getWhatsappCallLogs(
         user_id,
         search,
@@ -353,7 +384,13 @@ const MonitoringController = {
   async assignManager(req, res) {
     try {
       const result = await MonitoringModel.assignManager(req.body);
-      res.status(200).json({ success: true, message: "Manager assigned successfully", data: result });
+      res
+        .status(200)
+        .json({
+          success: true,
+          message: "Manager assigned successfully",
+          data: result,
+        });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
