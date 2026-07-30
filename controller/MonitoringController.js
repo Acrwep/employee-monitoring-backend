@@ -31,8 +31,8 @@ const MonitoringController = {
 
   async login(req, res) {
     try {
-      const { user_code, password } = req.body;
-      const user = await MonitoringModel.getUserByUserCode(user_code);
+      const { mobile_number, password } = req.body;
+      const user = await MonitoringModel.getUserByUserCode(mobile_number);
       if (!user || user.password_hash !== password) {
         return res.status(401).json({
           success: false,

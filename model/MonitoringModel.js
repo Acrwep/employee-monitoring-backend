@@ -36,11 +36,11 @@ const MonitoringModel = {
     }
   },
 
-  async getUserByUserCode(user_code) {
+  async getUserByUserCode(mobile_number) {
     try {
       const [rows] = await pool.execute(
         `SELECT user_id, user_code, full_name, mobile_number, password_hash, category_id FROM users WHERE (user_code = ? OR mobile_number = ?)`,
-        [user_code, user_code],
+        [mobile_number, mobile_number],
       );
       return rows[0];
     } catch (error) {
